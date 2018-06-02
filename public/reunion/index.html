@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
+    <title></title>
+
+    <link rel="manifest" href="manifest.json">
+
+    <!-- un-comment this code to enable service worker
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('service-worker.js')
+          .then(() => console.log('service worker installed'))
+          .catch(err => console.log('Error', err));
+      }
+    </script>-->
+
+    <link href="lib/ionic/css/ionic.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+
+    <!-- IF using Sass (run gulp sass first), then uncomment below and remove the CSS includes above
+    <link href="css/ionic.app.css" rel="stylesheet">
+    -->
+
+    <!-- ionic/angularjs js -->
+    <script src="lib/ionic/js/ionic.bundle.js"></script>
+
+    <!-- CHART -->
+    <script src="lib/Chartjs/Chart.min.js"></script>
+    <script src="lib/angular-chart.js/angular-chart.js"></script>  
+
+    <!-- cordova script (this will be a 404 during development) -->
+    <script src="lib/ngCordova/dist/ng-cordova.min.js"></script>
+    <script src="cordova.js"></script>
+    <script src="lib/angular-cookie-master/angular-cookie.min.js"></script>
+
+    <!-- your app's js -->
+    <script src="js/app.js"></script>
+  </head>
+  <body ng-app="starter" style="background-color:#1A1A1A;" id="reunion_app" class="fullscreen">
+      <!-- MAIN PART OP APP -->
+          <!-- CONTENT AREA -->
+              <ion-nav-view id="app" style="background-color:#1A1A1A;" animation="slide-left-right" ></ion-nav-view>  
+      <!-- PAGES -->
+          <!-- CONFIG -->
+              <script id="views/config" type="text/ng-template">
+                  <ion-content scroll="false" class="has-header">
+                    <div class="config-spinner">
+                      <ion-spinner icon="spiral" class="spinner-positive"></ion-spinner>
+                      <h2 style="text-align:center;">{{ feedback }}</h2>
+                    </div>
+                  </ion-content>              
+              </script> 
+
+          <!-- LOGIN -->
+              <script id="views/login" type="text/ng-template">
+                  <ion-view style="background-color:#1A1A1A;" view-title="login">
+                    <ion-pane style="background-color:#1A1A1A;">
+                        <img id="banerleft" src="img/bannerleft-01.png">
+                        <img id="banerright" src="img/bannerright-01.png">
+                        <div class="login-input-box col col-33 col-offset-33">
+                            <img id="login-logo" src="img/ionic.png">
+
+                            <label class="item item-input login-input">
+                              <input type="text" placeholder="Login ID" ng-model="data.login_id">
+                            </label>
+                            <label class="item item-input login-input">
+                              <input type="password" placeholder="Password" ng-model="data.password">
+                            </label>                       
+                            <button class="button button-block button-positive loginbut" ng-click="login()">
+                              &nbsp;
+                            </button>
+                        </div>
+
+                        <h1 class="login-version">0.0.1</h1>
+                      </ion-pane>
+                  </ion-view>
+              </script> 
+
+          <!-- LAYOUT -->
+              <script id="views/layout" type="text/ng-template">
+                  <ion-nav-view style="background-color:Transparent;" animation="slide-left-right"  name="app">
+                      <ion-header-bar class="bar-positive"> 
+                          <button class="crumb-button" ng-repeat="crumb in layout.breadcrumbs" ng-class="{disabled: crumb.link == ''}" ng-click="crumbGo(crumb.link)">{{ crumb.title }}</button>
+
+                          <button class="signout" ng-click="logout()">Sign Out</button>
+                      </ion-header-bar>  
+
+                      <ion-footer-bar  class="bar-positive">
+                          <span class="layout-version">0.0.1</span>  
+
+                          <i class="icon ion-wifi online " ng-class="{balanced : netstate == 'online', assertive : netstate == 'offline'}"></i>
+
+                          <span class="layout-name">Logged in as : {{ layout.user.name }}</span>                         
+                      </ion-footer-bar> 
+                  </ion-nav-view>                 
+              </script>  
+
+          <!-- STORES -->
+              <script id="views/stores" type="text/ng-template">
+                  <ion-view cache-view="false">
+                      <ion-content scroll="false">
+                          <div class="stores-box">
+                              <h1>Choose Store:</h1>
+                              <div class="stores-container">
+                                  <div class="stores-search">
+                                    <input type="text" class="store-input" placeholder="Search Store" ng-model="searchText.$">
+                                  </div>
+                                  <ion-scroll class="stores-scroll" direction="y" has-bouncing="false">
+                                      <div class="stores-inner-container">
+                                          <ion-list>
+                                              <span>                                                
+                                                  <ion-item ng-repeat="store in stores | StoresFilter:searchText.$" class="store-item">
+                                                    <div class="list-store-name">#{{ store.id }} - {{ store.name }}</div>
+                                                    <button class="button button-positive list-store-button" ng-click="selectStore(store.name, store.id)">
+                                                      View
+                                                    </button>
+                                                  </ion-item>                 
+                                              </span>
+                                          </ion-list>
+                                      </div>
+                                  </ion-scroll>
+                              </div>
+                          </div>
+                      </ion-content>
+                  </ion-view>
+              </script> 
+              
+          <!-- STORES DETAILS -->
+              <script id="views/storeDetails" type="text/ng-template">
+                  <ion-view cache-view="false">
+                      <ion-content has-bouncing="false" scroll="false" class="outlet-content">
+                          <h4 class="storeWord">Store</h4>
+                          <div class="storeDetailsTitle"> <h1>{{ store.name }}</h1> <h3 style="float:right">#{{ store.id }}</h3> <br style="clear:both;"></div>
+                          
+                          <div class="row months" >
+                              <div class="col" ng-class="{current: month == '1', behind: Statmonth == '1'}"> <span> Jan</span> </div>
+                              <div class="col" ng-class="{current: month == '2', behind: Statmonth == '1'}"> <span> Feb</span> </div>
+                              <div class="col" ng-class="{current: month == '3', behind: Statmonth == '3'}"> <span> Mar</span> </div>
+                              <div class="col" ng-class="{current: month == '4', behind: Statmonth == '4'}"> <span> Apr</span> </div>
+                              <div class="col" ng-class="{current: month == '5', behind: Statmonth == '5'}"> <span> May</span> </div>
+                              <div class="col" ng-class="{current: month == '6', behind: Statmonth == '6'}"> <span> Jun</span> </div>
+                              <div class="col" ng-class="{current: month == '7', behind: Statmonth == '7'}"> <span> Jul</span> </div>
+                              <div class="col" ng-class="{current: month == '8', behind: Statmonth == '8'}"> <span> Aug</span> </div>
+                              <div class="col" ng-class="{current: month == '9', behind: Statmonth == '9'}"> <span> Sep</span> </div>
+                              <div class="col" ng-class="{current: month == '10', behind: Statmonth == '10'}"> <span> Oct</span> </div>
+                              <div class="col" ng-class="{current: month == '11', behind: Statmonth == '11'}"> <span> Nov</span> </div>
+                              <div class="col" ng-class="{current: month == '12', behind: Statmonth == '12'}"> <span> Des</span> </div>
+                          </div>
+
+                          <h3 class="storeDescriptiveTitle">Performance Dimensions to Date</h3>
+
+                          <div class="row responsive-lg">
+                              <div class="col col-60" >
+                                  <div style="position:relative">
+                                      <div class="row bar-legend" style="padding-left: 25px;">
+                                          <span class="your-score-shape"></span> Your Score
+                                          <span class="world-score-shape"></span> World Wide Score
+                                      </div>
+                                      <canvas id="bar"
+                                        class="chart chart-bar"
+                                        data="graph.data"
+                                        labels="graph.labels"
+                                        series='graph.series'
+                                        colours="graph.colours"
+                                        options="graph.options">
+                                      </canvas>
+                                      <h1 class="noAvailableMessage" ng-if="emptyGraph == '0' ">
+                                        No Data available for graph
+                                      </h1>                                      
+                                  </div>                                  
+                              </div>
+
+                              <div class="col col-40" style="margin: 0 auto;">
+                                  <div class="ranking-box">
+                                      <h6>Total Points </h6>
+                                      <h1>{{ totalPoints }}</h1>
+                                  </div>
+
+                                  <div class="buttons-box">
+                                      <button class="past-results-button" ng-click="pastResults()">Past Results</button>
+                                      <button class="action-button" ng-click="goToHome()">{{ store.call_status }}</button>
+                                  </div>
+                              </div>                              
+                          </div>                          
+                      </ion-content>
+                  </ion-view>
+              </script>  
+
+          <!-- PAST RESULTS -->
+              <script id="views/pastResults" type="text/ng-template">
+                  <ion-view cache-view="false">
+                      <ion-content scroll="false">
+
+                          <h4 class="storeWord">Past Results</h4>
+                          <div class="storeDetailsTitle"> <h1>{{ store.name }}</h1> <button style="max-width: 150px;float: right;margin: 0;clear: inherit;margin-top: 5px;" class="button button-block button-positive" ng-click="backToDetails()">Back</button> <br style="clear:both;"></div>
+
+                          <table cellpadding="0" cellspacing="0" border="0" class="stats-table">
+                              <thead>
+                                  <tr class="font-bold">
+                                      <td></td>
+                                      <td>Jan</td>
+                                      <td>Feb</td>
+                                      <td>Mar</td>
+                                      <td>Apr</td>
+                                      <td>May</td>
+                                      <td>Jun</td>
+                                      <td>Jul</td>
+                                      <td>Aug</td>
+                                      <td>Sep</td>
+                                      <td>Oct</td>
+                                      <td>Nov</td>
+                                      <td>Dec</td>
+                                  </tr>
+                              </thead>
+                              <tbody>
+                                  <tr>
+                                      <td>Question 1</td>
+                                      <td ng-repeat="item in data['0'] track by $index">{{ item }}</td>
+                                  </tr>
+                                  <tr>
+                                      <td>Question 2</td>
+                                      <td ng-repeat="item in data['1'] track by $index">{{ item }}</td>
+                                  </tr>
+                                  <tr>
+                                      <td>Question 3</td>
+                                      <td ng-repeat="item in data['2'] track by $index">{{ item }}</td>
+                                  </tr>
+                                  <tr>
+                                      <td>Question 4</td>
+                                      <td ng-repeat="item in data['3'] track by $index">{{ item }}</td>
+                                  </tr>
+                                  <tr>
+                                      <td>Question 5</td>
+                                      <td ng-repeat="item in data['4'] track by $index">{{ item }}</td>
+                                  </tr>
+                                  <tr>
+                                      <td>Question 6</td>
+                                      <td ng-repeat="item in data['5'] track by $index">{{ item }}</td>
+                                  </tr>
+                                  <tr>
+                                      <td>Question 7</td>
+                                      <td ng-repeat="item in data['6'] track by $index">{{ item }}</td>
+                                  </tr>    
+                                  <tr>
+                                      <td>Question 8</td>
+                                      <td ng-repeat="item in data['7'] track by $index">{{ item }}</td>
+                                  </tr> 
+                                  <tr>
+                                      <td>Question 9</td>
+                                      <td ng-repeat="item in data['8'] track by $index">{{ item }}</td>
+                                  </tr>  
+                                  <tr>
+                                      <td>Question 10</td>
+                                      <td ng-repeat="item in data['9'] track by $index">{{ item }}</td>
+                                  </tr>
+                                  <tr>
+                                      <td>Question 11</td>
+                                      <td ng-repeat="item in data['10'] track by $index">{{ item }}</td>
+                                  </tr>                                               
+                                  <tr class="font-bold border-bottom">
+                                      <td >Total points to date</td>
+                                      <td ng-repeat="item in data['TOTALS'] track by $index">{{ item }}</td>
+                                  </tr>                              
+                              </tbody>
+                          </table>                          
+
+                      </ion-content>
+                  </ion-view>
+              </script>    
+
+          <!-- STORE HOME -->
+              <script id="views/storeHome" type="text/ng-template">
+                  <ion-view>
+                      <ion-content scroll="false">
+
+                          <h4 class="storeWord">Home</h4>
+                          <div class="storeDetailsTitle"> <h1>{{ store.name }}</h1> <button style="max-width: 150px;float: right;margin: 0;clear: inherit;margin-top: 5px;" class="button button-block button-positive" ng-click="backToDetails()">Back</button> <br style="clear:both;"></div>
+
+                          <div class="home-container">
+                            <div class="block" ng-if="layout.store.call_status != 'completed'" ng-click="goTo('app.storeQuestions')"><span style="text-transform:capitalize;">{{ layout.store.call_status }}</span> Call</div>
+                            <div class="block" ng-click="goTo('app.storeSummary')">Summary</div>
+                            <br style="clear:both;">
+                          </div>                          
+
+                      </ion-content>                  
+                  </ion-view>
+              </script> 
+
+          <!-- STORE QUESTIONS -->
+              <script id="views/storeQuestions" type="text/ng-template">
+                  <ion-view >
+                      <ion-content scroll="false">
+
+                          <div class="storeTitle"> <h1>Questions</h1> <button style="max-width: 150px;float: right;margin: 0;clear: inherit;margin-top: 5px;" class="button button-block button-positive" ng-click="backToHome()">Back</button> <button style="max-width: 150px;float: right;margin: 0;clear: inherit;margin-top: 5px;margin-right: 15px;" class="button button-block button-positive" ng-if="update == 1" ng-click="updateQ()">Update</button> <button style="max-width: 150px;float: right;margin: 0;clear: inherit;margin-top: 5px;margin-right:15px;" class="button button-block button-positive" ng-if="submitMonth" ng-click="submit()">Submit</button> <br style="clear:both;"></div>
+
+                          <ion-scroll class="questions-scroll" direction="y" has-bouncing="false">
+                            <table cellpadding="0" cellspacing="0" border="0" class="questions-table">
+                                <thead>
+                                    <tr class="font-bold">
+                                        <td>Question</td>
+                                        <td>Visit 1</td>
+                                        <td>Visit 2</td>
+                                        <td>Visit 3</td>
+                                        <td>Visit 4</td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>100% Portfolio</td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV1"  ng-click="check()" name="1" ng-model="currentStats[currentMonth]['1'].V1A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV1"  ng-click="check()" name="1" ng-model="currentStats[currentMonth]['1'].V1A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV2"  ng-click="check()" name="2" ng-model="currentStats[currentMonth]['1'].V2A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV2"  ng-click="check()" name="2" ng-model="currentStats[currentMonth]['1'].V2A" ng-value="'no'">Non</ion-radio>                                      
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV3"  ng-click="check()" name="3" ng-model="currentStats[currentMonth]['1'].V3A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV3"  ng-click="check()" name="3" ng-model="currentStats[currentMonth]['1'].V3A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV4"  ng-click="check()" name="4" ng-model="currentStats[currentMonth]['1'].V4A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV4"  ng-click="check()" name="4" ng-model="currentStats[currentMonth]['1'].V4A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Planogramme type</td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV1"  ng-click="check()" name="5" ng-model="currentStats[currentMonth]['2'].V1A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV1"  ng-click="check()" name="5" ng-model="currentStats[currentMonth]['2'].V1A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV2"  ng-click="check()" name="6" ng-model="currentStats[currentMonth]['2'].V2A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV2"  ng-click="check()" name="6" ng-model="currentStats[currentMonth]['2'].V2A" ng-value="'no'">Non</ion-radio>                                      
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV3"  ng-click="check()" name="7" ng-model="currentStats[currentMonth]['2'].V3A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV3"  ng-click="check()" name="7" ng-model="currentStats[currentMonth]['2'].V3A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV4"  ng-click="check()" name="8" ng-model="currentStats[currentMonth]['2'].V4A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV4"  ng-click="check()" name="8" ng-model="currentStats[currentMonth]['2'].V4A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Nouveautés references</td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV1"  ng-click="check()" name="9" ng-model="currentStats[currentMonth]['3'].V1A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV1"  ng-click="check()" name="9" ng-model="currentStats[currentMonth]['3'].V1A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV2"  ng-click="check()" name="10" ng-model="currentStats[currentMonth]['3'].V2A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV2"  ng-click="check()" name="10" ng-model="currentStats[currentMonth]['3'].V2A" ng-value="'no'">Non</ion-radio>                                      
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV3"  ng-click="check()" name="11" ng-model="currentStats[currentMonth]['3'].V3A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV3"  ng-click="check()" name="11" ng-model="currentStats[currentMonth]['3'].V3A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV4"  ng-click="check()" name="12" ng-model="currentStats[currentMonth]['3'].V4A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV4"  ng-click="check()" name="12" ng-model="currentStats[currentMonth]['3'].V4A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Rupture</td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV1"  ng-click="check()" name="13" ng-model="currentStats[currentMonth]['4'].V1A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV1"  ng-click="check()" name="13" ng-model="currentStats[currentMonth]['4'].V1A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV2"  ng-click="check()" name="14" ng-model="currentStats[currentMonth]['4'].V2A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV2"  ng-click="check()" name="14" ng-model="currentStats[currentMonth]['4'].V2A" ng-value="'no'">Non</ion-radio>                                      
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV3"  ng-click="check()" name="15" ng-model="currentStats[currentMonth]['4'].V3A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV3"  ng-click="check()" name="15" ng-model="currentStats[currentMonth]['4'].V3A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV4"  ng-click="check()" name="16" ng-model="currentStats[currentMonth]['4'].V4A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV4"  ng-click="check()" name="16" ng-model="currentStats[currentMonth]['4'].V4A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Prix à parité</td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV1"  ng-click="check()" name="17" ng-model="currentStats[currentMonth]['5'].V1A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV1"  ng-click="check()" name="17" ng-model="currentStats[currentMonth]['5'].V1A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV2"  ng-click="check()" name="18" ng-model="currentStats[currentMonth]['5'].V2A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV2"  ng-click="check()" name="18" ng-model="currentStats[currentMonth]['5'].V2A" ng-value="'no'">Non</ion-radio>                                      
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV3"  ng-click="check()" name="19" ng-model="currentStats[currentMonth]['5'].V3A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV3"  ng-click="check()" name="19" ng-model="currentStats[currentMonth]['5'].V3A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV4"  ng-click="check()" name="20" ng-model="currentStats[currentMonth]['5'].V4A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV4"  ng-click="check()" name="20" ng-model="currentStats[currentMonth]['5'].V4A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Partage de Volume Industrie / PMR</td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV1"  ng-click="check()" name="21" ng-model="currentStats[currentMonth]['6'].V1A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV1"  ng-click="check()" name="21" ng-model="currentStats[currentMonth]['6'].V1A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV2"  ng-click="check()" name="22" ng-model="currentStats[currentMonth]['6'].V2A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV2"  ng-click="check()" name="22" ng-model="currentStats[currentMonth]['6'].V2A" ng-value="'no'">Non</ion-radio>                                      
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV3"  ng-click="check()" name="23" ng-model="currentStats[currentMonth]['6'].V3A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV3"  ng-click="check()" name="23" ng-model="currentStats[currentMonth]['6'].V3A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV4"  ng-click="check()" name="24" ng-model="currentStats[currentMonth]['6'].V4A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV4"  ng-click="check()" name="24" ng-model="currentStats[currentMonth]['6'].V4A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Participation Staff Coaching</td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV1"  ng-click="check()" name="25" ng-model="currentStats[currentMonth]['7'].V1A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV1"  ng-click="check()" name="25" ng-model="currentStats[currentMonth]['7'].V1A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV2"  ng-click="check()" name="26" ng-model="currentStats[currentMonth]['7'].V2A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV2"  ng-click="check()" name="26" ng-model="currentStats[currentMonth]['7'].V2A" ng-value="'no'">Non</ion-radio>                                      
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV3"  ng-click="check()" name="27" ng-model="currentStats[currentMonth]['7'].V3A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV3"  ng-click="check()" name="27" ng-model="currentStats[currentMonth]['7'].V3A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV4"  ng-click="check()" name="28" ng-model="currentStats[currentMonth]['7'].V4A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV4"  ng-click="check()" name="28" ng-model="currentStats[currentMonth]['7'].V4A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Succès Staff Coaching</td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV1"  ng-click="check()" name="29" ng-model="currentStats[currentMonth]['8'].V1A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV1"  ng-click="check()" name="29" ng-model="currentStats[currentMonth]['8'].V1A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV2"  ng-click="check()" name="30" ng-model="currentStats[currentMonth]['8'].V2A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV2"  ng-click="check()" name="30" ng-model="currentStats[currentMonth]['8'].V2A" ng-value="'no'">Non</ion-radio>                                      
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV3"  ng-click="check()" name="31" ng-model="currentStats[currentMonth]['8'].V3A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV3"  ng-click="check()" name="31" ng-model="currentStats[currentMonth]['8'].V3A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV4"  ng-click="check()" name="32" ng-model="currentStats[currentMonth]['8'].V4A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV4"  ng-click="check()" name="32" ng-model="currentStats[currentMonth]['8'].V4A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Participation Education</td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV1"  ng-click="check()" name="33" ng-model="currentStats[currentMonth]['9'].V1A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV1"  ng-click="check()" name="33" ng-model="currentStats[currentMonth]['9'].V1A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV2"  ng-click="check()" name="34" ng-model="currentStats[currentMonth]['9'].V2A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV2"  ng-click="check()" name="34" ng-model="currentStats[currentMonth]['9'].V2A" ng-value="'no'">Non</ion-radio>                                      
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV3"  ng-click="check()" name="35" ng-model="currentStats[currentMonth]['9'].V3A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV3"  ng-click="check()" name="35" ng-model="currentStats[currentMonth]['9'].V3A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV4"  ng-click="check()" name="36" ng-model="currentStats[currentMonth]['9'].V4A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV4"  ng-click="check()" name="36" ng-model="currentStats[currentMonth]['9'].V4A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Succès Mistery Shopper</td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV1"  ng-click="check()" name="37" ng-model="currentStats[currentMonth]['10'].V1A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV1"  ng-click="check()" name="37" ng-model="currentStats[currentMonth]['10'].V1A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV2"  ng-click="check()" name="38" ng-model="currentStats[currentMonth]['10'].V2A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV2"  ng-click="check()" name="38" ng-model="currentStats[currentMonth]['10'].V2A" ng-value="'no'">Non</ion-radio>                                      
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV3"  ng-click="check()" name="39" ng-model="currentStats[currentMonth]['10'].V3A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV3"  ng-click="check()" name="39" ng-model="currentStats[currentMonth]['10'].V3A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV4"  ng-click="check()" name="40" ng-model="currentStats[currentMonth]['10'].V4A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV4"  ng-click="check()" name="40" ng-model="currentStats[currentMonth]['10'].V4A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Succès Education</td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV1"  ng-click="check()" name="41" ng-model="currentStats[currentMonth]['11'].V1A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV1"  ng-click="check()" name="41" ng-model="currentStats[currentMonth]['11'].V1A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV2"  ng-click="check()" name="42" ng-model="currentStats[currentMonth]['11'].V2A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV2"  ng-click="check()" name="42" ng-model="currentStats[currentMonth]['11'].V2A" ng-value="'no'">Non</ion-radio>                                      
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV3"  ng-click="check()" name="43" ng-model="currentStats[currentMonth]['11'].V3A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV3"  ng-click="check()" name="43" ng-model="currentStats[currentMonth]['11'].V3A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV4"  ng-click="check()" name="44" ng-model="currentStats[currentMonth]['11'].V4A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV4"  ng-click="check()" name="44" ng-model="currentStats[currentMonth]['11'].V4A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                    </tr> 
+                                    <tr>
+                                      <td><h3 class="questions-total">Total : {{ points }}</h3></td>
+                                    </tr>                                                              
+                                </tbody>
+                            </table>                                                  
+                          <ion-scroll>
+                      </ion-content>                  
+                  </ion-view>
+              </script>
+
+          <!-- STORE SUMMARY -->
+              <script id="views/storeSummary" type="text/ng-template">
+                  <ion-view>
+                      <ion-content scroll="false">
+
+                          <div class="storeTitle"> <h1>Summary</h1> <button style="max-width: 150px;float: right;margin: 0;clear: inherit;margin-top: 5px;" class="button button-block button-positive" ng-click="backToHome()">Back</button> <br style="clear:both;"></div>        
+
+                          <ion-scroll class="questions-scroll" direction="y" has-bouncing="false">
+                            <table cellpadding="0" cellspacing="0" border="0" class="summary-table">
+                                <thead>
+                                    <tr class="font-bold">
+                                        <td>Question</td>
+                                        <td>Visit 1</td>
+                                        <td>Visit 2</td>
+                                        <td>Visit 3</td>
+                                        <td>Visit 4</td>
+                                        <td>Pts.</td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>100% Portfolio</td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV1" name="1" ng-model="currentStats[currentMonth]['1'].V1A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV1" name="1" ng-model="currentStats[currentMonth]['1'].V1A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV2"   name="2" ng-model="currentStats[currentMonth]['1'].V2A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV2"   name="2" ng-model="currentStats[currentMonth]['1'].V2A" ng-value="'no'">Non</ion-radio>                                      
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV3"   name="3" ng-model="currentStats[currentMonth]['1'].V3A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV3"   name="3" ng-model="currentStats[currentMonth]['1'].V3A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV4"   name="4" ng-model="currentStats[currentMonth]['1'].V4A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV4"   name="4" ng-model="currentStats[currentMonth]['1'].V4A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>{{ currentStats[currentMonth]['1'].POINTS }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Planogramme type</td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV1"   name="5" ng-model="currentStats[currentMonth]['2'].V1A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV1"   name="5" ng-model="currentStats[currentMonth]['2'].V1A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV2"   name="6" ng-model="currentStats[currentMonth]['2'].V2A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV2"   name="6" ng-model="currentStats[currentMonth]['2'].V2A" ng-value="'no'">Non</ion-radio>                                      
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV3"   name="7" ng-model="currentStats[currentMonth]['2'].V3A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV3"   name="7" ng-model="currentStats[currentMonth]['2'].V3A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV4"   name="8" ng-model="currentStats[currentMonth]['2'].V4A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV4"   name="8" ng-model="currentStats[currentMonth]['2'].V4A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>{{ currentStats[currentMonth]['2'].POINTS }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Nouveautés references</td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV1"   name="9" ng-model="currentStats[currentMonth]['3'].V1A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV1"   name="9" ng-model="currentStats[currentMonth]['3'].V1A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV2"   name="10" ng-model="currentStats[currentMonth]['3'].V2A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV2"   name="10" ng-model="currentStats[currentMonth]['3'].V2A" ng-value="'no'">Non</ion-radio>                                      
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV3"   name="11" ng-model="currentStats[currentMonth]['3'].V3A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV3"   name="11" ng-model="currentStats[currentMonth]['3'].V3A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV4"   name="12" ng-model="currentStats[currentMonth]['3'].V4A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV4"   name="12" ng-model="currentStats[currentMonth]['3'].V4A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>{{ currentStats[currentMonth]['3'].POINTS }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Rupture</td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV1"   name="13" ng-model="currentStats[currentMonth]['4'].V1A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV1"   name="13" ng-model="currentStats[currentMonth]['4'].V1A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV2"   name="14" ng-model="currentStats[currentMonth]['4'].V2A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV2"   name="14" ng-model="currentStats[currentMonth]['4'].V2A" ng-value="'no'">Non</ion-radio>                                      
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV3"   name="15" ng-model="currentStats[currentMonth]['4'].V3A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV3"   name="15" ng-model="currentStats[currentMonth]['4'].V3A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV4"   name="16" ng-model="currentStats[currentMonth]['4'].V4A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV4"   name="16" ng-model="currentStats[currentMonth]['4'].V4A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>{{ currentStats[currentMonth]['4'].POINTS }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Prix à parité</td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV1"   name="17" ng-model="currentStats[currentMonth]['5'].V1A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV1"   name="17" ng-model="currentStats[currentMonth]['5'].V1A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV2"   name="18" ng-model="currentStats[currentMonth]['5'].V2A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV2"   name="18" ng-model="currentStats[currentMonth]['5'].V2A" ng-value="'no'">Non</ion-radio>                                      
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV3"   name="19" ng-model="currentStats[currentMonth]['5'].V3A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV3"   name="19" ng-model="currentStats[currentMonth]['5'].V3A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV4"   name="20" ng-model="currentStats[currentMonth]['5'].V4A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV4"   name="20" ng-model="currentStats[currentMonth]['5'].V4A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>{{ currentStats[currentMonth]['5'].POINTS }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Partage de Volume Industrie / PMR</td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV1"   name="21" ng-model="currentStats[currentMonth]['6'].V1A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV1"   name="21" ng-model="currentStats[currentMonth]['6'].V1A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV2"   name="22" ng-model="currentStats[currentMonth]['6'].V2A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV2"   name="22" ng-model="currentStats[currentMonth]['6'].V2A" ng-value="'no'">Non</ion-radio>                                      
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV3"   name="23" ng-model="currentStats[currentMonth]['6'].V3A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV3"   name="23" ng-model="currentStats[currentMonth]['6'].V3A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV4"   name="24" ng-model="currentStats[currentMonth]['6'].V4A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV4"   name="24" ng-model="currentStats[currentMonth]['6'].V4A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>{{ currentStats[currentMonth]['6'].POINTS }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Participation Staff Coaching</td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV1"   name="25" ng-model="currentStats[currentMonth]['7'].V1A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV1"   name="25" ng-model="currentStats[currentMonth]['7'].V1A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV2"   name="26" ng-model="currentStats[currentMonth]['7'].V2A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV2"   name="26" ng-model="currentStats[currentMonth]['7'].V2A" ng-value="'no'">Non</ion-radio>                                      
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV3"   name="27" ng-model="currentStats[currentMonth]['7'].V3A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV3"   name="27" ng-model="currentStats[currentMonth]['7'].V3A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV4"   name="28" ng-model="currentStats[currentMonth]['7'].V4A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV4"   name="28" ng-model="currentStats[currentMonth]['7'].V4A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>{{ currentStats[currentMonth]['7'].POINTS }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Succès Staff Coaching</td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV1"   name="29" ng-model="currentStats[currentMonth]['8'].V1A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV1"   name="29" ng-model="currentStats[currentMonth]['8'].V1A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV2"   name="30" ng-model="currentStats[currentMonth]['8'].V2A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV2"   name="30" ng-model="currentStats[currentMonth]['8'].V2A" ng-value="'no'">Non</ion-radio>                                      
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV3"   name="31" ng-model="currentStats[currentMonth]['8'].V3A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV3"   name="31" ng-model="currentStats[currentMonth]['8'].V3A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV4"   name="32" ng-model="currentStats[currentMonth]['8'].V4A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV4"   name="32" ng-model="currentStats[currentMonth]['8'].V4A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>{{ currentStats[currentMonth]['8'].POINTS }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Participation Education</td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV1"   name="33" ng-model="currentStats[currentMonth]['9'].V1A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV1"   name="33" ng-model="currentStats[currentMonth]['9'].V1A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV2"   name="34" ng-model="currentStats[currentMonth]['9'].V2A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV2"   name="34" ng-model="currentStats[currentMonth]['9'].V2A" ng-value="'no'">Non</ion-radio>                                      
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV3"   name="35" ng-model="currentStats[currentMonth]['9'].V3A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV3"   name="35" ng-model="currentStats[currentMonth]['9'].V3A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV4"   name="36" ng-model="currentStats[currentMonth]['9'].V4A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV4"   name="36" ng-model="currentStats[currentMonth]['9'].V4A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>{{ currentStats[currentMonth]['9'].POINTS }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Succès Mistery Shopper</td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV1"   name="37" ng-model="currentStats[currentMonth]['10'].V1A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV1"   name="37" ng-model="currentStats[currentMonth]['10'].V1A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV2"   name="38" ng-model="currentStats[currentMonth]['10'].V2A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV2"   name="38" ng-model="currentStats[currentMonth]['10'].V2A" ng-value="'no'">Non</ion-radio>                                      
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV3"   name="39" ng-model="currentStats[currentMonth]['10'].V3A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV3"   name="39" ng-model="currentStats[currentMonth]['10'].V3A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV4"   name="40" ng-model="currentStats[currentMonth]['10'].V4A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV4"   name="40" ng-model="currentStats[currentMonth]['10'].V4A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>{{ currentStats[currentMonth]['10'].POINTS }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Succès Education</td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV1"   name="41" ng-model="currentStats[currentMonth]['11'].V1A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV1"   name="41" ng-model="currentStats[currentMonth]['11'].V1A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV2"   name="42" ng-model="currentStats[currentMonth]['11'].V2A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV2"   name="42" ng-model="currentStats[currentMonth]['11'].V2A" ng-value="'no'">Non</ion-radio>                                      
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV3"   name="43" ng-model="currentStats[currentMonth]['11'].V3A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV3"   name="43" ng-model="currentStats[currentMonth]['11'].V3A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>
+                                            <ion-radio ng-disabled="DV4"   name="44" ng-model="currentStats[currentMonth]['11'].V4A" ng-value="'yes'">Oui</ion-radio>
+                                            <ion-radio ng-disabled="DV4"   name="44" ng-model="currentStats[currentMonth]['11'].V4A" ng-value="'no'">Non</ion-radio>
+                                        </td>
+                                        <td>{{ currentStats[currentMonth]['11'].POINTS }}</td>
+                                    </tr>                                                              
+                                </tbody>
+                            </table>                                                  
+                          <ion-scroll>
+                      </ion-content>                  
+                  </ion-view>
+              </script>                                                                                     
+  </body>
+</html>
